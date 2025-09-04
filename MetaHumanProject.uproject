@@ -5,7 +5,7 @@
 	"Description": "",
 	"Modules": [
 		{
-			"Name": "MyProject",
+			"Name": "MetaHumanProject",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}

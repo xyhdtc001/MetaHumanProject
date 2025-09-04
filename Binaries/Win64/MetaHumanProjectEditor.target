@@ -1,11 +1,11 @@
 {
-	"TargetName": "MyProjectEditor",
+	"TargetName": "MetaHumanProjectEditor",
 	"Platform": "Win64",
 	"Configuration": "Development",
 	"TargetType": "Editor",
 	"IsTestTarget": false,
 	"Architecture": "x64",
-	"Project": "../../MyProject.uproject",
+	"Project": "../../MetaHumanProject.uproject",
 	"Launch": "$(EngineDir)/Binaries/Win64/UnrealEditor.exe",
 	"LaunchCmd": "$(EngineDir)/Binaries/Win64/UnrealEditor-Cmd.exe",
 	"Version": 
@@ -4170,11 +4170,11 @@
 			"Type": "RequiredResource"
 		},
 		{
-			"Path": "$(ProjectDir)/Binaries/Win64/UnrealEditor-MyProject.dll",
+			"Path": "$(ProjectDir)/Binaries/Win64/UnrealEditor-MetaHumanProject.dll",
 			"Type": "DynamicLibrary"
 		},
 		{
-			"Path": "$(ProjectDir)/Binaries/Win64/UnrealEditor-MyProject.pdb",
+			"Path": "$(ProjectDir)/Binaries/Win64/UnrealEditor-MetaHumanProject.pdb",
 			"Type": "SymbolFile"
 		},
 		{
@@ -28684,7 +28684,7 @@
 			"Type": "UFS"
 		},
 		{
-			"Path": "$(ProjectDir)/MyProject.uproject",
+			"Path": "$(ProjectDir)/MetaHumanProject.uproject",
 			"Type": "UFS"
 		}
 	],

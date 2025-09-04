@@ -2,6 +2,7 @@
 	"BuildId": "43139311",
 	"Modules": 
 	{
+		"MetaHumanProject": "UnrealEditor-MetaHumanProject.dll",
 		"MyProject": "UnrealEditor-MyProject.dll"
 	}
 }
