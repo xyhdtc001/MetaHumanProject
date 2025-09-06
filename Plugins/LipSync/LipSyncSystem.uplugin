@@ -1,0 +1,34 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0.5",
+	"FriendlyName": "LipSyncSystem",
+	"Description": "The LipSyncSystem plugin is designed to generate animations of the mouth of MetaHuman avatars.",
+	"Category": "Audio",
+	"CreatedBy": "Stendhal Syndrome Studio",
+	"CreatedByURL": "",
+	"DocsURL": "https://drive.google.com/file/d/1h5h2xiLmkytZH1xd_fKy5G-I6BYUfhKf/view?usp=sharing",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/60d7aba5d0a84fb291304083f04d2923",
+	"SupportURL": "stendhal.syndrome.studio@gmail.com",
+	"EngineVersion": "5.6.0",
+	"CanContainContent": true,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "LipSyncSystem",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "LipSyncSystemEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		}
+	]
+}
