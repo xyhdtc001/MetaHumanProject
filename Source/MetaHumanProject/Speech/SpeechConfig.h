@@ -144,8 +144,8 @@ public:
 
     // UDeveloperSettings interface
     virtual FName GetCategoryName() const override { return FName(TEXT("Game")); }
-    virtual FText GetSectionText() const override { return NSLOCTEXT("SpeechSystemSettings", "SectionText", "Speech System"); }
-    virtual FText GetSectionDescription() const override { return NSLOCTEXT("SpeechSystemSettings", "SectionDescription", "Configuration for the Speech Recognition System"); }
+    virtual FText GetSectionText() const  { return NSLOCTEXT("SpeechSystemSettings", "SectionText", "Speech System"); }
+    virtual FText GetSectionDescription() const  { return NSLOCTEXT("SpeechSystemSettings", "SectionDescription", "Configuration for the Speech Recognition System"); }
 
     // 获取全局配置实例
     UFUNCTION(BlueprintPure, Category = "Speech System")

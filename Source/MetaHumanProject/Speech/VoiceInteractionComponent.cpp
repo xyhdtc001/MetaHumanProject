@@ -1023,27 +1023,11 @@ bool UVoiceInteractionComponent::StartUEAudioCapture()
             
             // 尝试使用上次成功的配置
             bool bOpenSuccess = false;
-            try
-            {
-                bOpenSuccess = AudioCapture->OpenAudioCaptureStream(DeviceParams, MoveTemp(OnCapture), LastSuccessfulBufferSize);
-            }
-            catch (...)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Exception during OpenAudioCaptureStream with last successful config"));
-            }
-            
+            bOpenSuccess = AudioCapture->OpenAudioCaptureStream(DeviceParams, MoveTemp(OnCapture), LastSuccessfulBufferSize);
             if (bOpenSuccess)
             {
                 bool bStartSuccess = false;
-                try
-                {
-                    bStartSuccess = AudioCapture->StartStream();
-                }
-                catch (...)
-                {
-                    UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Exception during StartStream with last successful config"));
-                }
-                
+                bStartSuccess = AudioCapture->StartStream();
                 if (bStartSuccess)
                 {
                     bIsAudioCapturing = true;
@@ -1056,14 +1040,7 @@ bool UVoiceInteractionComponent::StartUEAudioCapture()
                 }
                 else
                 {
-                    try
-                    {
-                        AudioCapture->CloseStream();
-                    }
-                    catch (...)
-                    {
-                        UE_LOG(LogTemp, Error, TEXT("VoiceInteractionComponent: Exception during CloseStream"));
-                    }
+                    AudioCapture->CloseStream();
                     UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Failed to start stream with last successful configuration, trying alternatives"));
                 }
             }
@@ -1083,14 +1060,7 @@ bool UVoiceInteractionComponent::StartUEAudioCapture()
             Audio::FCaptureDeviceInfo DeviceInfo;
             bool bGotDeviceInfo = false;
             
-            try
-            {
-                bGotDeviceInfo = AudioCapture->GetCaptureDeviceInfo(DeviceInfo, DeviceIndex);
-            }
-            catch (...)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Exception during GetCaptureDeviceInfo for device %d"), DeviceIndex);
-            }
+            bGotDeviceInfo = AudioCapture->GetCaptureDeviceInfo(DeviceInfo, DeviceIndex);
             
             if (bGotDeviceInfo)
             {
@@ -1144,28 +1114,12 @@ bool UVoiceInteractionComponent::StartUEAudioCapture()
                         
                         // 尝试打开音频设备
                         bool bOpenSuccess = false;
-                        try
-                        {
-                            bOpenSuccess = AudioCapture->OpenAudioCaptureStream(DeviceParams, MoveTemp(OnCapture), BufferSize);
-                        }
-                        catch (...)
-                        {
-                            UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Exception during OpenAudioCaptureStream"));
-                        }
-                        
+                        bOpenSuccess = AudioCapture->OpenAudioCaptureStream(DeviceParams, MoveTemp(OnCapture), BufferSize);
                         if (bOpenSuccess)
                         {
                             // 尝试启动流
                             bool bStartSuccess = false;
-                            try
-                            {
-                                bStartSuccess = AudioCapture->StartStream();
-                            }
-                            catch (...)
-                            {
-                                UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Exception during StartStream"));
-                            }
-                            
+                            bStartSuccess = AudioCapture->StartStream();
                             if (bStartSuccess)
                             {
                                 bIsAudioCapturing = true;
@@ -1186,14 +1140,7 @@ bool UVoiceInteractionComponent::StartUEAudioCapture()
                             else
                             {
                                 // 关闭流并继续尝试
-                                try
-                                {
-                                    AudioCapture->CloseStream();
-                                }
-                                catch (...)
-                                {
-                                    UE_LOG(LogTemp, Error, TEXT("VoiceInteractionComponent: Exception during CloseStream"));
-                                }
+                                AudioCapture->CloseStream();
                             }
                         }
                         
