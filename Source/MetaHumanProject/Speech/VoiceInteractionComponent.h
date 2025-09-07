@@ -22,7 +22,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVoiceActivityChanged, bool, bVoic
  * 可以添加到MetaHuman角色上实现语音对话功能
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), BlueprintType, Blueprintable)
-class METAHUMANCPP_API UVoiceInteractionComponent : public UActorComponent
+class METAHUMANPROJECT_API UVoiceInteractionComponent : public UActorComponent
 {
     GENERATED_BODY()
 

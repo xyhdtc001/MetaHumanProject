@@ -7,7 +7,7 @@
  * RAII音频缓冲区管理器
  * 自动管理音频数据的内存分配和释放
  */
-class METAHUMANCPP_API FScopedAudioBuffer
+class METAHUMANPROJECT_API FScopedAudioBuffer
 {
 private:
     uint8* Buffer = nullptr;
@@ -80,7 +80,7 @@ public:
  * 音频缓冲区对象池
  * 减少频繁的内存分配和释放
  */
-class METAHUMANCPP_API FAudioBufferPool
+class METAHUMANPROJECT_API FAudioBufferPool
 {
 private:
     TArray<TArray<float>> AvailableBuffers;
@@ -160,7 +160,7 @@ public:
  * 智能SoundWave创建器
  * 安全管理SoundWave的内存
  */
-class METAHUMANCPP_API FSoundWaveBuilder
+class METAHUMANPROJECT_API FSoundWaveBuilder
 {
 private:
     TArray<uint8> AudioData;

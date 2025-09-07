@@ -4,7 +4,7 @@
 #include "Sound/SoundWave.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "MetahumanCpp/MetaHumanPlayerController.h"
+#include "MetaHumanProject/MetaHumanPlayerController.h"
 
 // UE音频录制支持
 #include "AudioCaptureCore.h"

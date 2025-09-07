@@ -1,7 +1,7 @@
 #include "Command_PlayHumanSpeech.h"
 
 #include "Kismet/GameplayStatics.h"
-#include "MetahumanCpp/MetaHumanPlayerController.h"
+#include "MetaHumanProject/MetaHumanPlayerController.h"
 
 void UCommad_PlayHumanSpeech::ProcessCommand(const FCommandDescribe& CommandDesc)
 {

@@ -10,7 +10,7 @@
  * 提供静态函数方便在蓝图中调用语音相关功能
  */
 UCLASS()
-class METAHUMANCPP_API USpeechBlueprintLibrary : public UBlueprintFunctionLibrary
+class METAHUMANPROJECT_API USpeechBlueprintLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

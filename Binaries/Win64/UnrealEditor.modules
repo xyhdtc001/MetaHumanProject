@@ -1,8 +1,7 @@
 {
-	"BuildId": "43139311",
+	"BuildId": "84c8e8be-18c1-4dab-a5cc-1ef293960cce",
 	"Modules": 
 	{
-		"MetaHumanProject": "UnrealEditor-MetaHumanProject.dll",
-		"MyProject": "UnrealEditor-MyProject.dll"
+		"MetaHumanProject": "UnrealEditor-MetaHumanProject.dll"
 	}
 }

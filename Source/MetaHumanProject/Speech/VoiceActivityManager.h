@@ -22,7 +22,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVoiceActivityDetected, bool, bVoi
  * 集成RuntimeAudioImporter的VAD功能，检测音频中的语音活动
  */
 UCLASS(BlueprintType, Blueprintable)
-class METAHUMANCPP_API UVoiceActivityManager : public UObject
+class METAHUMANPROJECT_API UVoiceActivityManager : public UObject
 {
     GENERATED_BODY()
 

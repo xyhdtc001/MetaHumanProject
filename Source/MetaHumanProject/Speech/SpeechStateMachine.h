@@ -38,7 +38,7 @@ enum class ESpeechErrorType : uint8
  * 语音系统状态机
  */
 UCLASS(BlueprintType)
-class METAHUMANCPP_API USpeechStateMachine : public UObject
+class METAHUMANPROJECT_API USpeechStateMachine : public UObject
 {
     GENERATED_BODY()
 
@@ -112,7 +112,7 @@ private:
  * 错误恢复管理器
  */
 UCLASS(BlueprintType)
-class METAHUMANCPP_API USpeechErrorRecovery : public UObject
+class METAHUMANPROJECT_API USpeechErrorRecovery : public UObject
 {
     GENERATED_BODY()
 

@@ -66,6 +66,11 @@ public:
 		ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
+	UFUNCTION(BlueprintCallable, Category = "LipSync")
+	bool IsPlaying()const {return !bAudioFinished&&Sequence;};
+
+	float GetPercent()const{return CurrentPercent;};
+
 protected:
 	UAudioComponent *FindAutoplayAudioComponent() const;
 
@@ -90,4 +95,6 @@ private:
 	bool bAudioFinished;
 	
 	unsigned IntPos;
+	
+	float CurrentPercent  = 0;
 };

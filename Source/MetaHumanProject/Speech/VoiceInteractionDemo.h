@@ -10,7 +10,7 @@
  * 展示如何使用语音交互功能
  */
 UCLASS(BlueprintType, Blueprintable)
-class METAHUMANCPP_API AVoiceInteractionDemo : public AActor
+class METAHUMANPROJECT_API AVoiceInteractionDemo : public AActor
 {
     GENERATED_BODY()
     

@@ -6,7 +6,7 @@
 /**
  * 语音系统异步任务基类
  */
-class METAHUMANCPP_API FSpeechTask : public FNonAbandonableTask
+class METAHUMANPROJECT_API FSpeechTask : public FNonAbandonableTask
 {
 public:
     FSpeechTask() = default;
@@ -48,7 +48,7 @@ private:
 /**
  * 音频处理异步任务
  */
-class METAHUMANCPP_API FAudioProcessingTask : public FSpeechTask
+class METAHUMANPROJECT_API FAudioProcessingTask : public FSpeechTask
 {
 public:
     FAudioProcessingTask(const TArray<float>& InAudioData, TFunction<void(const TArray<uint8>&)> InCallback)
@@ -95,7 +95,7 @@ private:
 /**
  * 语音识别异步任务
  */
-class METAHUMANCPP_API FSpeechRecognitionTask : public FSpeechTask
+class METAHUMANPROJECT_API FSpeechRecognitionTask : public FSpeechTask
 {
 public:
     FSpeechRecognitionTask(const TArray<uint8>& InAudioData, const FString& InSessionID, TFunction<void(bool)> InCallback)
@@ -127,7 +127,7 @@ private:
 /**
  * 异步任务管理器
  */
-class METAHUMANCPP_API FSpeechAsyncManager
+class METAHUMANPROJECT_API FSpeechAsyncManager
 {
 public:
     static FSpeechAsyncManager& Get()

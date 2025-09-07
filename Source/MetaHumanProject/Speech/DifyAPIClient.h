@@ -15,7 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDifyErrorReceived, const FString&
  * 客户端组件，用于与Dify API进行通信
  */
 UCLASS(BlueprintType, Blueprintable)
-class METAHUMANCPP_API UDifyAPIClient : public UObject
+class METAHUMANPROJECT_API UDifyAPIClient : public UObject
 {
     GENERATED_BODY()
 

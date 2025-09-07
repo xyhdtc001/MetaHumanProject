@@ -121,6 +121,8 @@ void ULipSystemComponent::OnAudioPlaybackPercent(const UAudioComponent*, const U
 	{
 		Percent = 0.0f;	
 	}
+	CurrentPercent = Percent;
+	
 	const auto PlayPos = SoundWave->Duration * Percent;
 	const auto IntPosTmp = static_cast<unsigned>(roundf(PlayPos * 100.f));
 	if (IntPosTmp <= IntPos && IntPosTmp != 0)

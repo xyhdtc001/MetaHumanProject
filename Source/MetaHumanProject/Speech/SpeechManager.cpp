@@ -457,7 +457,7 @@ FString USpeechManager::GetDefaultAppID() const
     
     // 从配置文件读取AppID（向后兼容）
     FString AppID;
-    if (GConfig->GetString(TEXT("/Script/MetahumanCpp.SpeechManager"), TEXT("DefaultAppID"), AppID, GGameIni))
+    if (GConfig->GetString(TEXT("/Script/MetahumanProject.SpeechManager"), TEXT("DefaultAppID"), AppID, GGameIni))
     {
         if (AppID != TEXT("your_app_id_here") && !AppID.IsEmpty())
         {
@@ -466,7 +466,7 @@ FString USpeechManager::GetDefaultAppID() const
     }
     
     // 最后尝试从SDK目录的配置文件读取（如果存在）
-    FString SDKConfigPath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source/MetahumanCpp/ThirdParty/iFlytek/config.ini"));
+    FString SDKConfigPath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Source/MetahumanProject/ThirdParty/iFlytek/config.ini"));
     if (FPaths::FileExists(SDKConfigPath))
     {
         FString ConfigContent;
@@ -497,7 +497,7 @@ FString USpeechManager::GetDefaultAPIKey() const
 {
     // 从配置文件读取APIKey
     FString APIKey;
-    if (GConfig->GetString(TEXT("/Script/MetahumanCpp.SpeechManager"), TEXT("DefaultAPIKey"), APIKey, GGameIni))
+    if (GConfig->GetString(TEXT("/Script/MetahumanProject.SpeechManager"), TEXT("DefaultAPIKey"), APIKey, GGameIni))
     {
         if (APIKey != TEXT("your_api_key_here") && !APIKey.IsEmpty())
         {

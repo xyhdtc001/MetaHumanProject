@@ -9,7 +9,7 @@
  * 语音系统全局配置
  */
 USTRUCT(BlueprintType)
-struct METAHUMANCPP_API FSpeechSystemConfig
+struct METAHUMANPROJECT_API FSpeechSystemConfig
 {
     GENERATED_BODY()
 
@@ -84,7 +84,7 @@ struct METAHUMANCPP_API FSpeechSystemConfig
  * 语音性能统计信息
  */
 USTRUCT(BlueprintType)
-struct METAHUMANCPP_API FSpeechStatistics
+struct METAHUMANPROJECT_API FSpeechStatistics
 {
     GENERATED_BODY()
 
@@ -135,7 +135,7 @@ struct METAHUMANCPP_API FSpeechStatistics
  * 在项目设置中可配置
  */
 UCLASS(config = Game, defaultconfig, meta = (DisplayName = "Speech System Settings"))
-class METAHUMANCPP_API USpeechSystemSettings : public UDeveloperSettings
+class METAHUMANPROJECT_API USpeechSystemSettings : public UDeveloperSettings
 {
     GENERATED_BODY()
 

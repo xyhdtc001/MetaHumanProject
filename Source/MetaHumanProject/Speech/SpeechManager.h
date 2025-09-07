@@ -46,7 +46,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpeechError, const FString&, Erro
  * 语音管理器 - 统一管理语音识别和语音合成
  */
 UCLASS(BlueprintType, Blueprintable)
-class METAHUMANCPP_API USpeechManager : public UGameInstanceSubsystem
+class METAHUMANPROJECT_API USpeechManager : public UGameInstanceSubsystem
 {
     GENERATED_BODY()
 

@@ -9,7 +9,7 @@
  * 性能指标收集器
  */
 UCLASS(BlueprintType)
-class METAHUMANCPP_API USpeechPerformanceMonitor : public UObject
+class METAHUMANPROJECT_API USpeechPerformanceMonitor : public UObject
 {
     GENERATED_BODY()
 
@@ -93,7 +93,7 @@ private:
  * 资源使用监控器
  */
 UCLASS(BlueprintType)
-class METAHUMANCPP_API USpeechResourceMonitor : public UObject
+class METAHUMANPROJECT_API USpeechResourceMonitor : public UObject
 {
     GENERATED_BODY()
 
