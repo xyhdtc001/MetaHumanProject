@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
-#include "VoiceActivityManager.h"
+#include "RuntimeAudioImporterTypes.h"
 #include "SpeechConfig.generated.h"
 
 /**
@@ -41,7 +41,7 @@ struct METAHUMANPROJECT_API FSpeechSystemConfig
 
     // VAD 配置
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VAD", meta = (DisplayName = "VAD模式"))
-    EVADMode VADMode = EVADMode::Aggressive;
+    ERuntimeVADMode VADMode = ERuntimeVADMode::Aggressive;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VAD", meta = (DisplayName = "语音开始阈值(帧)", ClampMin = "1", ClampMax = "20"))
     int32 VoiceStartThreshold = 5;

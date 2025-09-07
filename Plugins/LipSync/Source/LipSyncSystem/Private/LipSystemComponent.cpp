@@ -69,8 +69,12 @@ void ULipSystemComponent::Start(UAudioComponent* InAudioComponent, ULipSyncFrame
 	Sequence = InSequence;
 	if (AudioComponent != InAudioComponent)
 	{
-		AudioComponent->OnAudioPlaybackPercentNative.Remove(PlaybackPercentHandle);
-		AudioComponent->OnAudioFinishedNative.Remove(PlaybackFinishedHandle);
+		if (AudioComponent)
+		{
+			AudioComponent->OnAudioPlaybackPercentNative.Remove(PlaybackPercentHandle);
+			AudioComponent->OnAudioFinishedNative.Remove(PlaybackFinishedHandle);
+		}
+		
 		
 		AudioComponent = InAudioComponent;
 

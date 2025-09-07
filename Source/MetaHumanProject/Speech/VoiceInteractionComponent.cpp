@@ -20,6 +20,13 @@ UVoiceInteractionComponent::UVoiceInteractionComponent()
     bCurrentVoiceActivity = false;
     bIsBufferingVoice = false;
     bContinuousRecognitionMode = true;
+    bIsSpeechRecognitionActive = false;
+    
+    // VAD状态初始化
+    bVoiceDetected = false;
+    ContinuousVoiceFrames = 0;
+    ContinuousSilenceFrames = 0;
+    LastVoiceDetectedTime = 0.0f;
     
     VoiceStartTime = 0.0f;
     MaxBufferChunks = 3000; // 约3000个chunk，约3分钟的音频缓存上限
@@ -67,42 +74,31 @@ void UVoiceInteractionComponent::BeginPlay()
         }
     }
 
-    // 初始化VAD Manager
+    // 初始化RuntimeVoiceActivityDetector
     UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: VAD initialization - bVADEnabled=%s"), bVADEnabled ? TEXT("true") : TEXT("false"));
     
     if (bVADEnabled)
     {
-        VADManager = NewObject<UVoiceActivityManager>(this);
-        if (VADManager)
+        RuntimeVADDetector = NewObject<URuntimeVoiceActivityDetector>(this);
+        if (RuntimeVADDetector)
         {
-            UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: VADManager created successfully"));
+            UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: RuntimeVADDetector created successfully"));
             
-            // 绑定VAD事件
-            VADManager->OnVoiceActivityChanged.AddDynamic(this, &UVoiceInteractionComponent::OnVADActivityChangedInternal);
-            
-            // 设置VAD配置 - 为连续识别优化，减少频繁切换
-            VADManager->bEnableSmoothing = bVADSmoothingEnabled;
-            VADManager->VoiceStartThreshold = 5;  // 增加到5帧，减少误触发
-            VADManager->VoiceEndThreshold = 30;   // 增加到30帧，避免过早结束
-            
-            // 初始化VAD
-            UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Attempting to initialize VAD with mode %d, sample rate 16000"), static_cast<int32>(VADMode));
-            
-            if (VADManager->InitializeVAD(VADMode, 16000))
+            // 设置VAD模式
+            if (RuntimeVADDetector->SetVADMode(VADMode))
             {
-                UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: VAD initialized successfully"));
+                UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: VAD mode set to %d successfully"), static_cast<int32>(VADMode));
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("VoiceInteractionComponent: Failed to initialize VAD - Disabling VAD for this session"));
-                // 如果VAD初始化失败，暂时禁用VAD但继续工作
+                UE_LOG(LogTemp, Error, TEXT("VoiceInteractionComponent: Failed to set VAD mode - Disabling VAD for this session"));
                 bVADEnabled = false;
-                VADManager = nullptr;
+                RuntimeVADDetector = nullptr;
             }
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("VoiceInteractionComponent: Failed to create VADManager - Disabling VAD for this session"));
+            UE_LOG(LogTemp, Error, TEXT("VoiceInteractionComponent: Failed to create RuntimeVADDetector - Disabling VAD for this session"));
             bVADEnabled = false;
         }
     }
@@ -160,10 +156,10 @@ void UVoiceInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReaso
         SpeechManager->OnSpeechError.RemoveDynamic(this, &UVoiceInteractionComponent::OnSpeechErrorInternal);
     }
     
-    if (VADManager)
+    // 清理RuntimeVADDetector
+    if (RuntimeVADDetector)
     {
-        VADManager->OnVoiceActivityChanged.RemoveDynamic(this, &UVoiceInteractionComponent::OnVADActivityChangedInternal);
-        VADManager = nullptr;
+        RuntimeVADDetector = nullptr;
     }
     
     // 清理Dify API Client
@@ -203,17 +199,22 @@ bool UVoiceInteractionComponent::StartListening(const FString& Language)
     }
     
     // 在连续识别模式下的处理
-    UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Continuous recognition mode processing - bVADEnabled=%s, VADManager valid=%s, VAD initialized=%s"), 
+    UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Continuous recognition mode processing - bVADEnabled=%s, RuntimeVADDetector valid=%s"), 
            bVADEnabled ? TEXT("true") : TEXT("false"),
-           VADManager ? TEXT("true") : TEXT("false"), 
-           (VADManager && VADManager->IsVADInitialized()) ? TEXT("true") : TEXT("false"));
+           RuntimeVADDetector ? TEXT("true") : TEXT("false"));
            
     if (bContinuousRecognitionMode)
     {
-        if (bVADEnabled && VADManager && VADManager->IsVADInitialized())
+        if (bVADEnabled && RuntimeVADDetector)
         {
             UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Started listening in continuous mode (VAD-controlled) with language: %s"), *Language);
             // VAD模式：等待VAD检测到语音再启动识别会话
+            // 初始化VAD状态
+            bVoiceDetected = false;
+            bIsSpeechRecognitionActive = false;
+            ContinuousVoiceFrames = 0;
+            ContinuousSilenceFrames = 0;
+            LastVoiceDetectedTime = 0.0f;
         }
         else
         {
@@ -221,6 +222,7 @@ bool UVoiceInteractionComponent::StartListening(const FString& Language)
             // 无VAD模式：立即启动识别会话
             if (SpeechManager->StartSpeechRecognition(Language))
             {
+                bIsSpeechRecognitionActive = true;
                 UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Recognition session started successfully (no VAD mode)"));
             }
             else
@@ -257,12 +259,20 @@ bool UVoiceInteractionComponent::StopListening()
         return true;
     }
 
-    if (SpeechManager)
+    if (SpeechManager && bIsSpeechRecognitionActive)
     {
         SpeechManager->StopSpeechRecognition();
+        bIsSpeechRecognitionActive = false;
     }
 
     bIsListening = false;
+    bIsBufferingVoice = false;
+    
+    // 重置VAD状态
+    bVoiceDetected = false;
+    ContinuousVoiceFrames = 0;
+    ContinuousSilenceFrames = 0;
+    LastVoiceDetectedTime = 0.0f;
     
     // 停止音频捕获
     if (bIsAudioCapturing)
@@ -346,7 +356,7 @@ bool UVoiceInteractionComponent::StopAudioCapture()
 
 void UVoiceInteractionComponent::OnSpeechRecognizedInternal(const FString& RecognizedText)
 {
-    UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Recognition result: %s"), *RecognizedText);
+    UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: *** RECOGNITION RESULT RECEIVED *** : %s"), *RecognizedText);
     
     // 广播识别结果
     OnRecognitionResult.Broadcast(RecognizedText);
@@ -385,7 +395,7 @@ void UVoiceInteractionComponent::OnSpeechRecognizedInternal(const FString& Recog
         }
         
         // 检查是否为无VAD的连续识别模式
-        bool bIsNoVADContinuousMode = (!bVADEnabled || !VADManager || !VADManager->IsVADInitialized());
+        bool bIsNoVADContinuousMode = (!bVADEnabled || !RuntimeVADDetector);
         
         // 延迟结束当前会话并重启新会话（仅在无VAD连续模式下）
         FTimerHandle SessionCleanupTimer;
@@ -516,118 +526,6 @@ void UVoiceInteractionComponent::OnSpeechErrorInternal(const FString& ErrorMessa
     OnVoiceError.Broadcast(ErrorMessage);
 }
 
-void UVoiceInteractionComponent::OnVADActivityChangedInternal(bool bVoiceDetected)
-{
-    bCurrentVoiceActivity = bVoiceDetected;
-    
-    UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Voice activity changed: %s"), bVoiceDetected ? TEXT("Active") : TEXT("Inactive"));
-    
-    // 广播VAD事件
-    OnVoiceActivityChanged.Broadcast(bVoiceDetected);
-    
-    // 基于VAD的智能语音识别会话管理 - 使用缓冲策略
-    if (bContinuousRecognitionMode && SpeechManager)
-    {
-        if (bVoiceDetected)
-        {
-            // 检测到语音活动：开始缓冲语音数据
-            if (!bIsBufferingVoice)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Voice detected - Starting voice buffering"));
-                bIsBufferingVoice = true;
-                VoiceBuffer.Empty();
-                VoiceStartTime = FPlatformTime::Seconds();
-                
-                // 清除任何待处理的结束定时器
-                if (VoiceEndTimer.IsValid())
-                {
-                    GetWorld()->GetTimerManager().ClearTimer(VoiceEndTimer);
-                }
-                
-                // 启动新的语音识别会话
-                if (!SpeechManager->IsRecognitionActive())
-                {
-                    SpeechManager->StartSpeechRecognition(DefaultLanguage);
-                }
-                
-                // **关键修复：发送预缓冲的数据，防止第一个字丢失**
-                UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Sending pre-buffered audio data to prevent speech loss"));
-                
-                // 按正确顺序发送预缓冲区中的数据
-                for (int32 i = 0; i < PreBufferMaxChunks; i++)
-                {
-                    int32 Index = (PreBufferCurrentIndex + i) % PreBufferMaxChunks;
-                    if (PreBuffer[Index].Num() > 0)
-                    {
-                        SendAudioToSpeechRecognition(PreBuffer[Index]);
-                        // 也添加到语音缓冲区用于长语音处理
-                        VoiceBuffer.Add(PreBuffer[Index]);
-                    }
-                }
-                
-                UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Sent %d pre-buffered chunks to prevent speech start loss"), 
-                       PreBufferMaxChunks);
-                
-                // 设置长语音保护定时器 - 50秒后自动处理
-                GetWorld()->GetTimerManager().SetTimer(LongSpeechTimer, [this]()
-                {
-                    if (bIsBufferingVoice && bCurrentVoiceActivity)
-                    {
-                        UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Long speech detected (>50s) - Force processing to avoid timeout"));
-                        ProcessLongSpeechSegment();
-                    }
-                }, MaxSpeechDuration, false);
-            }
-        }
-        else
-        {
-            // 语音活动结束：设置延迟处理
-            if (bIsBufferingVoice)
-            {
-                UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Voice ended - Scheduling buffer processing"));
-                
-                // 延迟1.5秒处理，给识别结果回调一些时间先处理
-                GetWorld()->GetTimerManager().SetTimer(VoiceEndTimer, [this]()
-                {
-                    // 只有在还在缓冲状态且没有语音活动时才处理
-                    if (!bCurrentVoiceActivity && bIsBufferingVoice)
-                    {
-                        UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Processing voice end after no recognition result"));
-                        
-                        // 如果还有缓冲数据且识别会话还活跃，发送剩余数据
-                        if (VoiceBuffer.Num() > 0 && SpeechManager && SpeechManager->IsRecognitionActive())
-                        {
-                            UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Sending remaining buffered data (%d chunks)"), VoiceBuffer.Num());
-                            for (const TArray<float>& AudioChunk : VoiceBuffer)
-                            {
-                                SendAudioToSpeechRecognition(AudioChunk);
-                            }
-                        }
-                        
-                        // 清理状态
-                        VoiceBuffer.Empty();
-                        bIsBufferingVoice = false;
-                        
-                        // 延迟结束会话
-                        FTimerHandle SessionEndTimer;
-                        GetWorld()->GetTimerManager().SetTimer(SessionEndTimer, [this]()
-                        {
-                            if (SpeechManager && SpeechManager->IsRecognitionActive())
-                            {
-                                UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Ending session after voice inactivity timeout"));
-                                SpeechManager->StopSpeechRecognition();
-                            }
-                        }, 0.5f, false);
-                    }
-                    else
-                    {
-                        UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Voice end timer cancelled - recognition already handled or voice resumed"));
-                    }
-                }, 1.5f, false);
-            }
-        }
-    }
-}
 
 void UVoiceInteractionComponent::ProcessAudioData(const TArray<float>& AudioData)
 {
@@ -636,18 +534,120 @@ void UVoiceInteractionComponent::ProcessAudioData(const TArray<float>& AudioData
         return;
     }
 
-    // 连续识别模式：基于VAD的智能语音识别 - 使用预缓冲和缓冲策略
+    // 连续识别模式：基于VAD的智能语音识别
     if (bIsListening && SpeechManager && bContinuousRecognitionMode)
     {
-        if (bVADEnabled && VADManager && VADManager->IsVADInitialized())
+        if (bVADEnabled && RuntimeVADDetector)
         {
             // 持续进行预缓冲 - 无论是否在语音状态
-            // 使用循环缓冲区存储最近的音频数据
             PreBuffer[PreBufferCurrentIndex] = AudioData;
             PreBufferCurrentIndex = (PreBufferCurrentIndex + 1) % PreBufferMaxChunks;
             
-            // 处理VAD检测
-            VADManager->ProcessFloatAudioForVAD(AudioData, 16000, 1);
+            // 使用RuntimeAudioImporter的VAD进行检测
+            TArray<float> AudioDataCopy = AudioData; // ProcessVAD需要非const参数
+            bool bCurrentFrameHasVoice = RuntimeVADDetector->ProcessVAD(AudioDataCopy, 16000, 1);
+            
+            float CurrentTime = FPlatformTime::Seconds();
+            
+            // 处理VAD检测结果
+            if (bCurrentFrameHasVoice)
+            {
+                ContinuousVoiceFrames++;
+                ContinuousSilenceFrames = 0;
+                LastVoiceDetectedTime = CurrentTime;
+                
+                // 如果之前没有检测到语音，现在开始检测到
+                if (!bVoiceDetected)
+                {
+                    UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Voice activity started (frame %d)"), ContinuousVoiceFrames);
+                    
+                    // 达到语音开始阈值才认为真正开始说话
+                    if (ContinuousVoiceFrames >= VADVoiceStartThreshold)
+                    {
+                        bVoiceDetected = true;
+                        OnVoiceActivityChanged.Broadcast(true);
+                        
+                        // 开始语音识别会话（如果还没有激活）
+                        if (!bIsSpeechRecognitionActive)
+                        {
+                            if (SpeechManager->StartSpeechRecognition(DefaultLanguage))
+                            {
+                                bIsSpeechRecognitionActive = true;
+                                bIsBufferingVoice = true;
+                                VoiceBuffer.Reset();
+                                
+                                UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Started speech recognition triggered by VAD"));
+                                
+                                // 发送预缓冲区的数据（包含语音开始前的数据）
+                                for (int32 i = 0; i < PreBufferMaxChunks; i++)
+                                {
+                                    int32 BufferIndex = (PreBufferCurrentIndex + i) % PreBufferMaxChunks;
+                                    if (PreBuffer[BufferIndex].Num() > 0)
+                                    {
+                                        SendAudioToSpeechRecognition(PreBuffer[BufferIndex]);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                UE_LOG(LogTemp, Error, TEXT("VoiceInteractionComponent: Failed to start speech recognition"));
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // 继续检测到语音，保持状态
+                    UE_LOG(LogTemp, VeryVerbose, TEXT("VoiceInteractionComponent: Voice activity continues (frame %d)"), ContinuousVoiceFrames);
+                }
+            }
+            else
+            {
+                ContinuousSilenceFrames++;
+                // 注意：不要重置ContinuousVoiceFrames，除非真正进入静音状态
+                
+                // 如果之前检测到语音，现在开始静音
+                if (bVoiceDetected)
+                {
+                    // 使用更合理的静音阈值：基于时间而不是固定帧数
+                    // 假设每个音频块约为10ms（16000Hz采样率，160samples/块）
+                    float EstimatedFrameDurationMs = (float)AudioData.Num() / 16.0f; // 16000Hz -> 16 samples per ms
+                    float SilenceTimeMs = ContinuousSilenceFrames * EstimatedFrameDurationMs;
+                    
+                    UE_LOG(LogTemp, VeryVerbose, TEXT("VoiceInteractionComponent: Silence detected - frame %d, estimated duration %.1fms"), 
+                           ContinuousSilenceFrames, SilenceTimeMs);
+                    
+                    // 1.5秒的静音阈值（给更多时间处理停顿）
+                    if (SilenceTimeMs >= 1500.0f)
+                    {
+                        UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Voice activity ended after %d silence frames (%.1fms)"), 
+                               ContinuousSilenceFrames, SilenceTimeMs);
+                        
+                        bVoiceDetected = false;
+                        ContinuousVoiceFrames = 0;  // 现在才重置语音帧计数
+                        OnVoiceActivityChanged.Broadcast(false);
+                        
+                        // 停止语音识别会话
+                        if (bIsSpeechRecognitionActive)
+                        {
+                            SpeechManager->StopSpeechRecognition();
+                            bIsSpeechRecognitionActive = false;
+                            bIsBufferingVoice = false;
+                            
+                            UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: Stopped speech recognition due to silence timeout"));
+                        }
+                    }
+                }
+                else
+                {
+                    // 还没有检测到语音开始，如果静音太久就重置计数器
+                    if (ContinuousSilenceFrames > 100) // 避免计数器无限增长
+                    {
+                        ContinuousVoiceFrames = 0;
+                        ContinuousSilenceFrames = 0;
+                    }
+                }
+            }
             
             // 在缓冲模式下收集语音数据
             if (bIsBufferingVoice)
@@ -661,19 +661,12 @@ void UVoiceInteractionComponent::ProcessAudioData(const TArray<float>& AudioData
                 
                 // 缓冲语音数据
                 VoiceBuffer.Add(AudioData);
-                UE_LOG(LogTemp, VeryVerbose, TEXT("VoiceInteractionComponent: Buffering audio data, chunk size: %d, total chunks: %d"), AudioData.Num(), VoiceBuffer.Num());
                 
-                // 实时发送数据以便获得即时反馈
-                if (SpeechManager->IsRecognitionActive())
+                // 实时发送数据到语音识别
+                if (bIsSpeechRecognitionActive)
                 {
                     SendAudioToSpeechRecognition(AudioData);
                 }
-            }
-            else
-            {
-                // 不在缓冲模式，但仍进行预缓冲
-                UE_LOG(LogTemp, VeryVerbose, TEXT("VoiceInteractionComponent: Pre-buffering audio data (chunk %d/%d)"), 
-                       PreBufferCurrentIndex, PreBufferMaxChunks);
             }
         }
         else
@@ -685,18 +678,6 @@ void UVoiceInteractionComponent::ProcessAudioData(const TArray<float>& AudioData
             if (SpeechManager->IsRecognitionActive())
             {
                 SendAudioToSpeechRecognition(AudioData);
-            }
-            else
-            {
-                // 识别会话可能在识别成功后暂时停止并重启，这是正常的
-                // 只在长时间没有活跃会话时才记录警告
-                static double LastErrorLogTime = 0.0;
-                double CurrentTime = FPlatformTime::Seconds();
-                if (CurrentTime - LastErrorLogTime > 10.0) // 增加到10秒，减少不必要的日志
-                {
-                    UE_LOG(LogTemp, VeryVerbose, TEXT("VoiceInteractionComponent: Recognition session temporarily not active (may be restarting after successful recognition)"));
-                    LastErrorLogTime = CurrentTime;
-                }
             }
         }
     }
@@ -724,12 +705,22 @@ void UVoiceInteractionComponent::SendAudioToSpeechRecognition(const TArray<float
 
     // 添加定期调试日志（每秒一次）以避免日志过多
     static double LastLogTime = 0.0;
+    static int32 TotalBytesThisSecond = 0;
+    static int32 ChunksThisSecond = 0;
+    
     double CurrentTime = FPlatformTime::Seconds();
+    TotalBytesThisSecond += ConvertedData.Num();
+    ChunksThisSecond++;
+    
     if (CurrentTime - LastLogTime > 1.0) // 每秒记录一次
     {
-        UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Continuous recognition active - converting %d float samples to %d bytes, bIsListening=%s"), 
-               AudioData.Num(), ConvertedData.Num(), bIsListening ? TEXT("true") : TEXT("false"));
+        UE_LOG(LogTemp, Warning, TEXT("VoiceInteractionComponent: Sending audio - %d chunks, %d bytes total this second, bIsListening=%s, RecognitionActive=%s"), 
+               ChunksThisSecond, TotalBytesThisSecond, 
+               bIsListening ? TEXT("true") : TEXT("false"),
+               (SpeechManager && SpeechManager->IsRecognitionActive()) ? TEXT("true") : TEXT("false"));
         LastLogTime = CurrentTime;
+        TotalBytesThisSecond = 0;
+        ChunksThisSecond = 0;
     }
 
     // 发送到语音识别
@@ -914,46 +905,62 @@ void UVoiceInteractionComponent::CleanupAudioCapture()
 }
 
 // VAD函数实现
-bool UVoiceInteractionComponent::InitializeVAD(EVADMode Mode, int32 SampleRate)
+bool UVoiceInteractionComponent::InitializeVAD(ERuntimeVADMode Mode, int32 SampleRate)
 {
-    if (!VADManager)
+    if (!RuntimeVADDetector)
     {
-        VADManager = NewObject<UVoiceActivityManager>(this);
-        if (VADManager)
-        {
-            VADManager->OnVoiceActivityChanged.AddDynamic(this, &UVoiceInteractionComponent::OnVADActivityChangedInternal);
-        }
+        RuntimeVADDetector = NewObject<URuntimeVoiceActivityDetector>(this);
     }
 
-    if (VADManager)
+    if (RuntimeVADDetector)
     {
         VADMode = Mode;
-        return VADManager->InitializeVAD(Mode, SampleRate);
+        bool bSuccess = RuntimeVADDetector->SetVADMode(Mode);
+        if (bSuccess)
+        {
+            // 重置VAD状态
+            bVoiceDetected = false;
+            ContinuousVoiceFrames = 0;
+            ContinuousSilenceFrames = 0;
+            LastVoiceDetectedTime = 0.0f;
+            
+            UE_LOG(LogTemp, Log, TEXT("VoiceInteractionComponent: VAD initialized successfully with mode %d"), static_cast<int32>(Mode));
+        }
+        return bSuccess;
     }
 
     return false;
 }
 
-bool UVoiceInteractionComponent::SetVADMode(EVADMode Mode)
+bool UVoiceInteractionComponent::SetVADMode(ERuntimeVADMode Mode)
 {
     VADMode = Mode;
-    if (VADManager)
+    if (RuntimeVADDetector)
     {
-        return VADManager->SetVADMode(Mode);
+        return RuntimeVADDetector->SetVADMode(Mode);
     }
     return false;
 }
 
 bool UVoiceInteractionComponent::IsVADInitialized() const
 {
-    return VADManager ? VADManager->IsVADInitialized() : false;
+    return RuntimeVADDetector != nullptr;
 }
 
 bool UVoiceInteractionComponent::ResetVAD()
 {
-    if (VADManager)
+    if (RuntimeVADDetector)
     {
-        return VADManager->ResetVAD();
+        bool bSuccess = RuntimeVADDetector->ResetVAD();
+        if (bSuccess)
+        {
+            // 重置内部状态
+            bVoiceDetected = false;
+            ContinuousVoiceFrames = 0;
+            ContinuousSilenceFrames = 0;
+            LastVoiceDetectedTime = 0.0f;
+        }
+        return bSuccess;
     }
     return false;
 }

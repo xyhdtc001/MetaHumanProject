@@ -3,9 +3,10 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "SpeechManager.h"
-#include "VoiceActivityManager.h"
 #include "DifyAPIClient.h"
 #include "Sound/SoundWave.h"
+#include "VAD/RuntimeVoiceActivityDetector.h"
+#include "RuntimeAudioImporterTypes.h"
 
 // UE音频录制支持
 namespace Audio { class FAudioCapture; }
@@ -77,10 +78,10 @@ public:
 
     // VAD控制
     UFUNCTION(BlueprintCallable, Category = "Voice Interaction|VAD")
-    bool InitializeVAD(EVADMode Mode = EVADMode::Aggressive, int32 SampleRate = 16000);
+    bool InitializeVAD(ERuntimeVADMode Mode = ERuntimeVADMode::Aggressive, int32 SampleRate = 16000);
 
     UFUNCTION(BlueprintCallable, Category = "Voice Interaction|VAD")
-    bool SetVADMode(EVADMode Mode);
+    bool SetVADMode(ERuntimeVADMode Mode);
 
     UFUNCTION(BlueprintPure, Category = "Voice Interaction|VAD")
     bool IsVADInitialized() const;
@@ -132,7 +133,7 @@ public:
     bool bVADEnabled = true;  
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voice Interaction|VAD Settings")
-    EVADMode VADMode = EVADMode::Aggressive;
+    ERuntimeVADMode VADMode = ERuntimeVADMode::Aggressive;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voice Interaction|VAD Settings")
     bool bVADSmoothingEnabled = true;
@@ -158,9 +159,9 @@ protected:
     UPROPERTY()
     TObjectPtr<USpeechManager> SpeechManager;
 
-    // VAD Manager引用
+    // RuntimeAudioImporter VAD实例
     UPROPERTY()
-    TObjectPtr<UVoiceActivityManager> VADManager;
+    TObjectPtr<URuntimeVoiceActivityDetector> RuntimeVADDetector;
     
     // Dify API Client
     UPROPERTY()
@@ -171,6 +172,13 @@ protected:
     bool bIsSpeaking;
     bool bIsAudioCapturing;
     bool bCurrentVoiceActivity;  // 当前语音活动状态
+    bool bIsSpeechRecognitionActive;  // 语音识别会话是否激活
+
+    // VAD状态跟踪
+    bool bVoiceDetected;  // 当前是否检测到语音
+    int32 ContinuousVoiceFrames;  // 连续检测到语音的帧数
+    int32 ContinuousSilenceFrames;  // 连续静音的帧数
+    float LastVoiceDetectedTime;  // 最后检测到语音的时间
 
     // 语音缓冲区 - 用于在VAD检测期间缓冲完整的语音片段
     bool bIsBufferingVoice;
@@ -229,10 +237,6 @@ protected:
     
     UFUNCTION()
     void OnDifyErrorReceivedInternal(const FString& ErrorMessage);
-
-    // VAD回调函数
-    UFUNCTION()
-    void OnVADActivityChangedInternal(bool bVoiceDetected);
 
     // 音频处理
     void ProcessAudioData(const TArray<float>& AudioData);
